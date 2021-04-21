@@ -7,8 +7,8 @@ use TCG\Voyager\Database\Types\Type;
 
 class SmallIntType extends Type
 {
-    public const NAME = 'smallint';
-    public const DBTYPE = 'int2';
+    const NAME = 'smallint';
+    const DBTYPE = 'int2';
 
     public function getSQLDeclaration(array $field, AbstractPlatform $platform)
     {

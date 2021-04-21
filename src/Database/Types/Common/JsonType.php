@@ -7,7 +7,7 @@ use TCG\Voyager\Database\Types\Type;
 
 class JsonType extends Type
 {
-    public const NAME = 'json';
+    const NAME = 'json';
 
     public function getSQLDeclaration(array $field, AbstractPlatform $platform)
     {

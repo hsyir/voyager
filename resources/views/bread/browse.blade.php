@@ -16,14 +16,14 @@
             @include('voyager::partials.bulk-delete')
         @endcan
         @can('edit', app($dataType->model_name))
-            @if(!empty($dataType->order_column) && !empty($dataType->order_display_column))
+            @if(isset($dataType->order_column) && isset($dataType->order_display_column))
                 <a href="{{ route('voyager.'.$dataType->slug.'.order') }}" class="btn btn-primary btn-add-new">
                     <i class="voyager-list"></i> <span>{{ __('voyager::bread.order') }}</span>
                 </a>
             @endif
         @endcan
         @can('delete', app($dataType->model_name))
-            @if($usesSoftDeletes)
+            @if($usesSoftDeletes ?? '')
                 <input type="checkbox" @if ($showSoftDeleted) checked @endif id="show_soft_deletes" data-toggle="toggle" data-on="{{ __('voyager::bread.soft_deletes_off') }}" data-off="{{ __('voyager::bread.soft_deletes_on') }}">
             @endif
         @endcan
@@ -49,14 +49,14 @@
                                     <div class="col-2">
                                         <select id="search_key" name="key">
                                             @foreach($searchNames as $key => $name)
-                                                <option value="{{ $key }}" @if($search->key == $key || (empty($search->key) && $key == $defaultSearchKey)) selected @endif>{{ $name }}</option>
+                                                <option value="{{ $key }}" @if($search->key == $key || (empty($search->key) && $key == $defaultSearchKey)){{ 'selected' }}@endif>{{ $name }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div class="col-2">
                                         <select id="filter" name="filter">
-                                            <option value="contains" @if($search->filter == "contains") selected @endif>contains</option>
-                                            <option value="equals" @if($search->filter == "equals") selected @endif>=</option>
+                                            <option value="contains" @if($search->filter == "contains"){{ 'selected' }}@endif>contains</option>
+                                            <option value="equals" @if($search->filter == "equals"){{ 'selected' }}@endif>=</option>
                                         </select>
                                     </div>
                                     <div class="input-group col-md-12">
@@ -79,13 +79,13 @@
                                 <thead>
                                     <tr>
                                         @if($showCheckboxColumn)
-                                            <th class="dt-not-orderable">
+                                            <th>
                                                 <input type="checkbox" class="select_all">
                                             </th>
                                         @endif
                                         @foreach($dataType->browseRows as $row)
                                         <th>
-                                            @if ($isServerSide && ($row->type !== 'relationship' || $row->details->type == 'belongsTo'))
+                                            @if ($isServerSide)
                                                 <a href="{{ $row->sortByUrl($orderBy, $sortOrder) }}">
                                             @endif
                                             {{ $row->getTranslatedAttribute('display_name') }}
@@ -101,7 +101,7 @@
                                             @endif
                                         </th>
                                         @endforeach
-                                        <th class="actions text-right dt-not-orderable">{{ __('voyager::generic.actions') }}</th>
+                                        <th class="actions text-right">{{ __('voyager::generic.actions') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -120,7 +120,7 @@
                                             @endphp
                                             <td>
                                                 @if (isset($row->details->view))
-                                                    @include($row->details->view, ['row' => $row, 'dataType' => $dataType, 'dataTypeContent' => $dataTypeContent, 'content' => $data->{$row->field}, 'action' => 'browse', 'view' => 'browse', 'options' => $row->details])
+                                                    @include($row->details->view, ['row' => $row, 'dataType' => $dataType, 'dataTypeContent' => $dataTypeContent, 'content' => $data->{$row->field}, 'action' => 'browse'])
                                                 @elseif($row->type == 'image')
                                                     <img src="@if( !filter_var($data->{$row->field}, FILTER_VALIDATE_URL)){{ Voyager::image( $data->{$row->field} ) }}@else{{ $data->{$row->field} }}@endif" style="width:100px">
                                                 @elseif($row->type == 'relationship')
@@ -250,7 +250,7 @@
                                                 @endif
                                             </td>
                                         @endforeach
-                                        <td class="no-sort no-click bread-actions">
+                                        <td class="no-sort no-click" id="bread-actions">
                                             @foreach($actions as $action)
                                                 @if (!method_exists($action, 'massAction'))
                                                     @include('voyager::bread.partials.actions', ['action' => $action])
@@ -327,9 +327,7 @@
                     array_merge([
                         "order" => $orderColumn,
                         "language" => __('voyager::datatable'),
-                        "columnDefs" => [
-                            ['targets' => 'dt-not-orderable', 'searchable' =>  false, 'orderable' => false],
-                        ],
+                        "columnDefs" => [['targets' => -1, 'searchable' =>  false, 'orderable' => false]],
                     ],
                     config('voyager.dashboard.data_tables', []))
                 , true) !!});
@@ -358,7 +356,7 @@
             $('#delete_modal').modal('show');
         });
 
-        @if($usesSoftDeletes)
+        @if($usesSoftDeletes ?? '')
             @php
                 $params = [
                     's' => $search->value,

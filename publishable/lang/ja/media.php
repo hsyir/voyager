@@ -44,5 +44,4 @@ return [
     'browser_video_support'  => 'このブラウザはvideoタグをサポートしていません。',
     'browser_audio_support'  => 'このブラウザはaudio属性をサポートしていません。',
     'width'                  => '幅: ',
-    'add_all_selected'       => '選択したすべてを追加',
 ];

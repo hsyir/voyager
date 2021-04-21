@@ -16,10 +16,10 @@ return [
         'meta_keywords'    => 'Meta Keywords',
         'name'             => 'Имя',
         'order'            => 'Сортировка',
-        'page_image'       => 'Изображение Страницы',
+        'page_image'       => 'Изображение Статьи',
         'parent'           => 'Родитель',
         'password'         => 'Пароль',
-        'post_image'       => 'Изображение Статьи',
+        'post_image'       => 'Изображение Сообщения',
         'remember_token'   => 'Токен восстановления',
         'role'             => 'Роль',
         'seo_title'        => 'SEO Название',
@@ -38,12 +38,12 @@ return [
             'plural'   => 'Меню',
         ],
         'page'     => [
-            'singular' => 'Страница',
-            'plural'   => 'Страницы',
-        ],
-        'post'     => [
             'singular' => 'Статья',
             'plural'   => 'Статьи',
+        ],
+        'post'     => [
+            'singular' => 'Сообщение',
+            'plural'   => 'Сообщения',
         ],
         'role'     => [
             'singular' => 'Роль',

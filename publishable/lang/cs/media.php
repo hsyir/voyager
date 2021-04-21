@@ -43,5 +43,4 @@ return [
     'success_crop_image'    => 'Obrázek úspěšně oříznut',
     'height'                => 'Výška: ',
     'width'                 => 'Šířka: ',
-    'add_all_selected'      => 'přidat všechny vybrané',
 ];

@@ -15,8 +15,8 @@ class Page extends Model
     /**
      * Statuses.
      */
-    public const STATUS_ACTIVE = 'ACTIVE';
-    public const STATUS_INACTIVE = 'INACTIVE';
+    const STATUS_ACTIVE = 'ACTIVE';
+    const STATUS_INACTIVE = 'INACTIVE';
 
     /**
      * List of statuses.
@@ -34,7 +34,7 @@ class Page extends Model
             $this->author_id = Auth::user()->getKey();
         }
 
-        return parent::save();
+        parent::save();
     }
 
     /**

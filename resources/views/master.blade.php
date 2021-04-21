@@ -8,6 +8,7 @@
 
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,700" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v26.0.2/dist/font-face.css" rel="stylesheet" type="text/css" />
 
     <!-- Favicon -->
     <?php $admin_favicon = Voyager::setting('admin.icon_image', ''); ?>
@@ -50,6 +51,13 @@
     @endif
 
     @yield('head')
+    <link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+
+    <style>
+        *{
+            font-family: 'Vazir', sans-serif;
+        }
+    </style>
 </head>
 
 <body class="voyager @if(isset($dataType) && isset($dataType->slug)){{ $dataType->slug }}@endif">
@@ -112,7 +120,7 @@ if (\Illuminate\Support\Str::startsWith(Auth::user()->avatar, 'http://') || \Ill
         </div>
     </div>
 </div>
-@include('voyager::partials.app-footer')
+{{--@include('voyager::partials.app-footer')--}}
 
 <!-- Javascript Libs -->
 
@@ -141,6 +149,41 @@ if (\Illuminate\Support\Str::startsWith(Auth::user()->avatar, 'http://') || \Ill
 </script>
 @include('voyager::media.manager')
 @yield('javascript')
+<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+
+<script>
+    window.formatPersian  = false;
+    $(".datePick").pDatepicker(
+        {
+            format: 'YYYY/MM/DD',
+            initialValue: false,
+
+        }
+    );
+
+
+    // var el = document.querySelector('.number');
+    // el.addEventListener('keyup', function (event) {
+    //     if (event.which >= 37 && event.which <= 40) return;
+    //
+    //     this.value = this.value.replace(/\D/g, '')
+    //         .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    // });
+    $('input.number').keyup(function(event) {
+
+        // skip for arrow keys
+        if(event.which >= 37 && event.which <= 40) return;
+
+        // format number
+        $(this).val(function(index, value) {
+            return value
+                .replace(/\D/g, "")
+                .replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                ;
+        });
+    });
+</script>
 @stack('javascript')
 @if(!empty(config('voyager.additional_js')))<!-- Additional Javascript -->
     @foreach(config('voyager.additional_js') as $js)<script type="text/javascript" src="{{ asset($js) }}"></script>@endforeach

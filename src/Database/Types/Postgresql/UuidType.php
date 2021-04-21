@@ -7,7 +7,7 @@ use TCG\Voyager\Database\Types\Type;
 
 class UuidType extends Type
 {
-    public const NAME = 'uuid';
+    const NAME = 'uuid';
 
     public function getSQLDeclaration(array $field, AbstractPlatform $platform)
     {

@@ -6,7 +6,7 @@ use Doctrine\DBAL\Types\StringType as DoctrineStringType;
 
 class VarCharType extends DoctrineStringType
 {
-    public const NAME = 'varchar';
+    const NAME = 'varchar';
 
     public function getName()
     {

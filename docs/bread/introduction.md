@@ -64,12 +64,12 @@ You can define separate validation rules for edit and add:
 ```text
 {
     "validation": {
-        "rule": "min:3",
+        "rule": "required",
         "edit": {
-            "rule": "nullable"
+            "rule": "sometimes|min:3"
         },
         "add": {
-            "rule": "required"
+            "rule": "min:3"
         }
     }
 }

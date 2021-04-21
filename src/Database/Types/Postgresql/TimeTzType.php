@@ -7,7 +7,7 @@ use TCG\Voyager\Database\Types\Type;
 
 class TimeTzType extends Type
 {
-    public const NAME = 'timetz';
+    const NAME = 'timetz';
 
     public function getSQLDeclaration(array $field, AbstractPlatform $platform)
     {

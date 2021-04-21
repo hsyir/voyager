@@ -54,5 +54,4 @@ return [
     'browser_video_support'  => 'Votre navigateur ne supporte pas la balise vidéo.',
     'browser_audio_support'  => 'Votre navigateur ne supporte pas la balise audio.',
     'width'                  => 'Largeur : ',
-    'add_all_selected'       => 'Ajouter tous les sélectionnés',
 ];

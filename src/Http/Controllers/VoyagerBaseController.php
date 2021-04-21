@@ -52,17 +52,13 @@ class VoyagerBaseController extends Controller
             $searchable = SchemaManager::describeTable(app($dataType->model_name)->getTable())->pluck('name')->toArray();
             $dataRow = Voyager::model('DataRow')->whereDataTypeId($dataType->id)->get();
             foreach ($searchable as $key => $value) {
-                $field = $dataRow->where('field', $value)->first();
-                $displayName = ucwords(str_replace('_', ' ', $value));
-                if ($field !== null) {
-                    $displayName = $field->getTranslatedAttribute('display_name');
-                }
-                $searchNames[$value] = $displayName;
+                $displayName = $dataRow->where('field', $value)->first()->getTranslatedAttribute('display_name');
+                $searchNames[$value] = $displayName ?: ucwords(str_replace('_', ' ', $value));
             }
         }
 
         $orderBy = $request->get('order_by', $dataType->order_column);
-        $sortOrder = $request->get('sort_order', $dataType->order_direction);
+        $sortOrder = $request->get('sort_order', null);
         $usesSoftDeletes = false;
         $showSoftDeleted = false;
 
@@ -70,14 +66,14 @@ class VoyagerBaseController extends Controller
         if (strlen($dataType->model_name) != 0) {
             $model = app($dataType->model_name);
 
-            $query = $model::select($dataType->name.'.*');
-
             if ($dataType->scope && $dataType->scope != '' && method_exists($model, 'scope'.ucfirst($dataType->scope))) {
-                $query->{$dataType->scope}();
+                $query = $model->{$dataType->scope}();
+            } else {
+                $query = $model::select('*');
             }
 
             // Use withTrashed() if model uses SoftDeletes and if toggle is selected
-            if ($model && in_array(SoftDeletes::class, class_uses_recursive($model)) && Auth::user()->can('delete', app($dataType->model_name))) {
+            if ($model && in_array(SoftDeletes::class, class_uses($model)) && Auth::user()->can('delete', app($dataType->model_name))) {
                 $usesSoftDeletes = true;
 
                 if ($request->get('showSoftDeleted')) {
@@ -92,32 +88,11 @@ class VoyagerBaseController extends Controller
             if ($search->value != '' && $search->key && $search->filter) {
                 $search_filter = ($search->filter == 'equals') ? '=' : 'LIKE';
                 $search_value = ($search->filter == 'equals') ? $search->value : '%'.$search->value.'%';
-
-                $searchField = $dataType->name.'.'.$search->key;
-                if ($row = $this->findRelationshipRow($dataType->rows->where('type', 'relationship'), $search->key)) {
-                    $query->whereIn(
-                        $searchField,
-                        $row->details->model::where($row->details->label, $search_filter, $search_value)->pluck('id')->toArray()
-                    );
-                } else {
-                    $query->where($searchField, $search_filter, $search_value);
-                }
+                $query->where($search->key, $search_filter, $search_value);
             }
 
-            $row = $dataType->rows->where('field', $orderBy)->firstWhere('type', 'relationship');
-            if ($orderBy && (in_array($orderBy, $dataType->fields()) || !empty($row))) {
+            if ($orderBy && in_array($orderBy, $dataType->fields())) {
                 $querySortOrder = (!empty($sortOrder)) ? $sortOrder : 'desc';
-                if (!empty($row)) {
-                    $query->select([
-                        $dataType->name.'.*',
-                        'joined.'.$row->details->label.' as '.$orderBy,
-                    ])->leftJoin(
-                        $row->details->table.' as joined',
-                        $dataType->name.'.'.$row->details->column,
-                        'joined.'.$row->details->key,
-                    );
-                }
-
                 $dataTypeContent = call_user_func([
                     $query->orderBy($orderBy, $querySortOrder),
                     $getter,
@@ -137,10 +112,9 @@ class VoyagerBaseController extends Controller
         }
 
         // Check if BREAD is Translatable
-        $isModelTranslatable = is_bread_translatable($model);
-
-        // Eagerload Relations
-        $this->eagerLoadRelations($dataTypeContent, $dataType, 'browse', $isModelTranslatable);
+        if (($isModelTranslatable = is_bread_translatable($model))) {
+            $dataTypeContent->load('translations');
+        }
 
         // Check if server side pagination is enabled
         $isServerSide = isset($dataType->server_side) && $dataType->server_side;
@@ -176,7 +150,13 @@ class VoyagerBaseController extends Controller
         $orderColumn = [];
         if ($orderBy) {
             $index = $dataType->browseRows->where('field', $orderBy)->keys()->first() + ($showCheckboxColumn ? 1 : 0);
-            $orderColumn = [[$index, $sortOrder ?? 'desc']];
+            $orderColumn = [[$index, 'desc']];
+            if (!$sortOrder && isset($dataType->order_direction)) {
+                $sortOrder = $dataType->order_direction;
+                $orderColumn = [[$index, $dataType->order_direction]];
+            } else {
+                $orderColumn = [[$index, 'desc']];
+            }
         }
 
         $view = 'voyager::bread.browse';
@@ -225,16 +205,15 @@ class VoyagerBaseController extends Controller
 
         if (strlen($dataType->model_name) != 0) {
             $model = app($dataType->model_name);
-            $query = $model->query();
 
             // Use withTrashed() if model uses SoftDeletes and if toggle is selected
-            if ($model && in_array(SoftDeletes::class, class_uses_recursive($model))) {
-                $query = $query->withTrashed();
+            if ($model && in_array(SoftDeletes::class, class_uses($model))) {
+                $model = $model->withTrashed();
             }
             if ($dataType->scope && $dataType->scope != '' && method_exists($model, 'scope'.ucfirst($dataType->scope))) {
-                $query = $query->{$dataType->scope}();
+                $model = $model->{$dataType->scope}();
             }
-            $dataTypeContent = call_user_func([$query, 'findOrFail'], $id);
+            $dataTypeContent = call_user_func([$model, 'findOrFail'], $id);
             if ($dataTypeContent->deleted_at) {
                 $isSoftDeleted = true;
             }
@@ -254,9 +233,6 @@ class VoyagerBaseController extends Controller
 
         // Check if BREAD is Translatable
         $isModelTranslatable = is_bread_translatable($dataTypeContent);
-
-        // Eagerload Relations
-        $this->eagerLoadRelations($dataTypeContent, $dataType, 'read', $isModelTranslatable);
 
         $view = 'voyager::bread.read';
 
@@ -287,16 +263,15 @@ class VoyagerBaseController extends Controller
 
         if (strlen($dataType->model_name) != 0) {
             $model = app($dataType->model_name);
-            $query = $model->query();
 
             // Use withTrashed() if model uses SoftDeletes and if toggle is selected
-            if ($model && in_array(SoftDeletes::class, class_uses_recursive($model))) {
-                $query = $query->withTrashed();
+            if ($model && in_array(SoftDeletes::class, class_uses($model))) {
+                $model = $model->withTrashed();
             }
             if ($dataType->scope && $dataType->scope != '' && method_exists($model, 'scope'.ucfirst($dataType->scope))) {
-                $query = $query->{$dataType->scope}();
+                $model = $model->{$dataType->scope}();
             }
-            $dataTypeContent = call_user_func([$query, 'findOrFail'], $id);
+            $dataTypeContent = call_user_func([$model, 'findOrFail'], $id);
         } else {
             // If Model doest exist, get data from table name
             $dataTypeContent = DB::table($dataType->name)->where('id', $id)->first();
@@ -314,9 +289,6 @@ class VoyagerBaseController extends Controller
 
         // Check if BREAD is Translatable
         $isModelTranslatable = is_bread_translatable($dataTypeContent);
-
-        // Eagerload Relations
-        $this->eagerLoadRelations($dataTypeContent, $dataType, 'edit', $isModelTranslatable);
 
         $view = 'voyager::bread.edit-add';
 
@@ -338,37 +310,25 @@ class VoyagerBaseController extends Controller
         $id = $id instanceof \Illuminate\Database\Eloquent\Model ? $id->{$id->getKeyName()} : $id;
 
         $model = app($dataType->model_name);
-        $query = $model->query();
         if ($dataType->scope && $dataType->scope != '' && method_exists($model, 'scope'.ucfirst($dataType->scope))) {
-            $query = $query->{$dataType->scope}();
+            $model = $model->{$dataType->scope}();
         }
-        if ($model && in_array(SoftDeletes::class, class_uses_recursive($model))) {
-            $query = $query->withTrashed();
+        if ($model && in_array(SoftDeletes::class, class_uses($model))) {
+            $data = $model->withTrashed()->findOrFail($id);
+        } else {
+            $data = call_user_func([$dataType->model_name, 'findOrFail'], $id);
         }
-
-        $data = $query->findOrFail($id);
 
         // Check permission
         $this->authorize('edit', $data);
 
         // Validate fields with ajax
         $val = $this->validateBread($request->all(), $dataType->editRows, $dataType->name, $id)->validate();
-
-        // Get fields with images to remove before updating and make a copy of $data
-        $to_remove = $dataType->editRows->where('type', 'image')
-            ->filter(function ($item, $key) use ($request) {
-                return $request->hasFile($item->field);
-            });
-        $original_data = clone($data);
-
         $this->insertUpdateData($request, $slug, $dataType->editRows, $data);
-
-        // Delete Images
-        $this->deleteBreadImages($original_data, $to_remove);
 
         event(new BreadDataUpdated($dataType, $data));
 
-        if (auth()->user()->can('browse', app($dataType->model_name))) {
+        if (auth()->user()->can('browse', $model)) {
             $redirect = redirect()->route("voyager.{$dataType->slug}.index");
         } else {
             $redirect = redirect()->back();
@@ -416,9 +376,6 @@ class VoyagerBaseController extends Controller
         // Check if BREAD is Translatable
         $isModelTranslatable = is_bread_translatable($dataTypeContent);
 
-        // Eagerload Relations
-        $this->eagerLoadRelations($dataTypeContent, $dataType, 'add', $isModelTranslatable);
-
         $view = 'voyager::bread.edit-add';
 
         if (view()->exists("voyager::$slug.edit-add")) {
@@ -458,9 +415,9 @@ class VoyagerBaseController extends Controller
             }
 
             return $redirect->with([
-                'message'    => __('voyager::generic.successfully_added_new')." {$dataType->getTranslatedAttribute('display_name_singular')}",
-                'alert-type' => 'success',
-            ]);
+                    'message'    => __('voyager::generic.successfully_added_new')." {$dataType->getTranslatedAttribute('display_name_singular')}",
+                    'alert-type' => 'success',
+                ]);
         } else {
             return response()->json(['success' => true, 'data' => $data]);
         }
@@ -484,6 +441,9 @@ class VoyagerBaseController extends Controller
 
         $dataType = Voyager::model('DataType')->where('slug', '=', $slug)->first();
 
+        // Check permission
+        $this->authorize('delete', app($dataType->model_name));
+
         // Init array of IDs
         $ids = [];
         if (empty($id)) {
@@ -496,11 +456,8 @@ class VoyagerBaseController extends Controller
         foreach ($ids as $id) {
             $data = call_user_func([$dataType->model_name, 'findOrFail'], $id);
 
-            // Check permission
-            $this->authorize('delete', $data);
-
             $model = app($dataType->model_name);
-            if (!($model && in_array(SoftDeletes::class, class_uses_recursive($model)))) {
+            if (!($model && in_array(SoftDeletes::class, class_uses($model)))) {
                 $this->cleanup($dataType, $data);
             }
         }
@@ -532,15 +489,14 @@ class VoyagerBaseController extends Controller
         $dataType = Voyager::model('DataType')->where('slug', '=', $slug)->first();
 
         // Check permission
-        $model = app($dataType->model_name);
-        $this->authorize('delete', $model);
+        $this->authorize('delete', app($dataType->model_name));
 
         // Get record
-        $query = $model->withTrashed();
+        $model = call_user_func([$dataType->model_name, 'withTrashed']);
         if ($dataType->scope && $dataType->scope != '' && method_exists($model, 'scope'.ucfirst($dataType->scope))) {
-            $query = $query->{$dataType->scope}();
+            $model = $model->{$dataType->scope}();
         }
-        $data = $query->findOrFail($id);
+        $data = $model->findOrFail($id);
 
         $displayName = $dataType->getTranslatedAttribute('display_name_singular');
 
@@ -613,18 +569,10 @@ class VoyagerBaseController extends Controller
                 // Check if we're dealing with a nested array for the case of multiple files
                 if (is_array($fieldData[0])) {
                     foreach ($fieldData as $index=>$file) {
-                        // file type has a different structure than images
-                        if (!empty($file['original_name'])) {
-                            if ($file['original_name'] == $filename) {
-                                $key = $index;
-                                break;
-                            }
-                        } else {
-                            $file = array_flip($file);
-                            if (array_key_exists($filename, $file)) {
-                                $key = $index;
-                                break;
-                            }
+                        $file = array_flip($file);
+                        if (array_key_exists($filename, $file)) {
+                            $key = $index;
+                            break;
                         }
                     }
                 } else {
@@ -636,7 +584,7 @@ class VoyagerBaseController extends Controller
                     throw new Exception(__('voyager::media.file_does_not_exist'), 400);
                 }
 
-                $fileToRemove = $fieldData[$key]['download_link'] ?? $fieldData[$key];
+                $fileToRemove = $fieldData[$key];
 
                 // Remove file from array
                 unset($fieldData[$key]);
@@ -653,22 +601,33 @@ class VoyagerBaseController extends Controller
                 }
             }
 
+            // Remove file from filesystem
+            if ($fileToRemove != config('voyager.user.default_avatar')) {
+                $this->deleteFileIfExists($fileToRemove);
+            }
+
             $row = $dataType->rows->where('field', $field)->first();
 
-            // Remove file from filesystem
-            if (in_array($row->type, ['image', 'multiple_images'])) {
-                $this->deleteBreadImages($data, [$row], $fileToRemove);
-            } else {
-                $this->deleteFileIfExists($fileToRemove);
+            if (!empty($row->details->thumbnails)) {
+                $ext = explode('.', $fileToRemove);
+                $extension = '.'.$ext[count($ext) - 1];
+
+                $path = str_replace($extension, '', $fileToRemove);
+
+                foreach ($row->details->thumbnails as $thumbnail) {
+                    $thumb_name = $thumbnail->name;
+
+                    $this->deleteFileIfExists($path.'-'.$thumb_name.$extension);
+                }
             }
 
             $data->save();
 
             return response()->json([
-                'data' => [
-                    'status'  => 200,
-                    'message' => __('voyager::media.file_removed'),
-                ],
+               'data' => [
+                   'status'  => 200,
+                   'message' => __('voyager::media.file_removed'),
+               ],
             ]);
         } catch (Exception $e) {
             $code = 500;
@@ -707,7 +666,7 @@ class VoyagerBaseController extends Controller
         }
 
         // Delete Images
-        $this->deleteBreadImages($data, $dataType->deleteRows->whereIn('type', ['image', 'multiple_images']));
+        $this->deleteBreadImages($data, $dataType->deleteRows->where('type', 'image'));
 
         // Delete Files
         foreach ($dataType->deleteRows->where('type', 'file') as $row) {
@@ -744,40 +703,28 @@ class VoyagerBaseController extends Controller
      *
      * @return void
      */
-    public function deleteBreadImages($data, $rows, $single_image = null)
+    public function deleteBreadImages($data, $rows)
     {
-        $imagesDeleted = false;
-
         foreach ($rows as $row) {
-            if ($row->type == 'multiple_images') {
-                $images_to_remove = json_decode($data->getOriginal($row->field), true) ?? [];
-            } else {
-                $images_to_remove = [$data->getOriginal($row->field)];
+            if ($data->{$row->field} != config('voyager.user.default_avatar')) {
+                $this->deleteFileIfExists($data->{$row->field});
             }
 
-            foreach ($images_to_remove as $image) {
-                // Remove only $single_image if we are removing from bread edit
-                if ($image != config('voyager.user.default_avatar') && (is_null($single_image) || $single_image == $image)) {
-                    $this->deleteFileIfExists($image);
-                    $imagesDeleted = true;
+            if (isset($row->details->thumbnails)) {
+                foreach ($row->details->thumbnails as $thumbnail) {
+                    $ext = explode('.', $data->{$row->field});
+                    $extension = '.'.$ext[count($ext) - 1];
 
-                    if (isset($row->details->thumbnails)) {
-                        foreach ($row->details->thumbnails as $thumbnail) {
-                            $ext = explode('.', $image);
-                            $extension = '.'.$ext[count($ext) - 1];
+                    $path = str_replace($extension, '', $data->{$row->field});
 
-                            $path = str_replace($extension, '', $image);
+                    $thumb_name = $thumbnail->name;
 
-                            $thumb_name = $thumbnail->name;
-
-                            $this->deleteFileIfExists($path.'-'.$thumb_name.$extension);
-                        }
-                    }
+                    $this->deleteFileIfExists($path.'-'.$thumb_name.$extension);
                 }
             }
         }
 
-        if ($imagesDeleted) {
+        if ($rows->count() > 0) {
             event(new BreadImagesDeleted($data, $rows));
         }
     }
@@ -798,7 +745,7 @@ class VoyagerBaseController extends Controller
         // Check permission
         $this->authorize('edit', app($dataType->model_name));
 
-        if (empty($dataType->order_column) || empty($dataType->order_display_column)) {
+        if (!isset($dataType->order_column) || !isset($dataType->order_display_column)) {
             return redirect()
             ->route("voyager.{$dataType->slug}.index")
             ->with([
@@ -808,11 +755,10 @@ class VoyagerBaseController extends Controller
         }
 
         $model = app($dataType->model_name);
-        $query = $model->query();
-        if ($model && in_array(SoftDeletes::class, class_uses_recursive($model))) {
-            $query = $query->withTrashed();
+        if ($model && in_array(SoftDeletes::class, class_uses($model))) {
+            $model = $model->withTrashed();
         }
-        $results = $query->orderBy($dataType->order_column, $dataType->order_direction)->get();
+        $results = $model->orderBy($dataType->order_column, $dataType->order_direction)->get();
 
         $display_column = $dataType->order_display_column;
 
@@ -846,7 +792,7 @@ class VoyagerBaseController extends Controller
         $order = json_decode($request->input('order'));
         $column = $dataType->order_column;
         foreach ($order as $key => $item) {
-            if ($model && in_array(SoftDeletes::class, class_uses_recursive($model))) {
+            if ($model && in_array(SoftDeletes::class, class_uses($model))) {
                 $i = $model->withTrashed()->findOrFail($item->id);
             } else {
                 $i = $model->findOrFail($item->id);
@@ -881,66 +827,30 @@ class VoyagerBaseController extends Controller
         $search = $request->input('search', false);
         $dataType = Voyager::model('DataType')->where('slug', '=', $slug)->first();
 
-        $method = $request->input('method', 'add');
-
-        $model = app($dataType->model_name);
-        if ($method != 'add') {
-            $model = $model->find($request->input('id'));
-        }
-
-        $this->authorize($method, $model);
-
-        $rows = $dataType->{$method.'Rows'};
+        $rows = $request->input('method', 'add') == 'add' ? $dataType->addRows : $dataType->editRows;
         foreach ($rows as $key => $row) {
             if ($row->field === $request->input('type')) {
                 $options = $row->details;
-                $model = app($options->model);
                 $skip = $on_page * ($page - 1);
-
-                $additional_attributes = $model->additional_attributes ?? [];
-
-                // Apply local scope if it is defined in the relationship-options
-                if (isset($options->scope) && $options->scope != '' && method_exists($model, 'scope'.ucfirst($options->scope))) {
-                    $model = $model->{$options->scope}();
-                }
 
                 // If search query, use LIKE to filter results depending on field label
                 if ($search) {
-                    // If we are using additional_attribute as label
-                    if (in_array($options->label, $additional_attributes)) {
-                        $relationshipOptions = $model->all();
-                        $relationshipOptions = $relationshipOptions->filter(function ($model) use ($search, $options) {
-                            return stripos($model->{$options->label}, $search) !== false;
-                        });
-                        $total_count = $relationshipOptions->count();
-                        $relationshipOptions = $relationshipOptions->forPage($page, $on_page);
-                    } else {
-                        $total_count = $model->where($options->label, 'LIKE', '%'.$search.'%')->count();
-                        $relationshipOptions = $model->take($on_page)->skip($skip)
-                            ->where($options->label, 'LIKE', '%'.$search.'%')
-                            ->get();
-                    }
+                    $total_count = app($options->model)->where($options->label, 'LIKE', '%'.$search.'%')->count();
+                    $relationshipOptions = app($options->model)->take($on_page)->skip($skip)
+                        ->where($options->label, 'LIKE', '%'.$search.'%')
+                        ->get();
                 } else {
-                    $total_count = $model->count();
-                    $relationshipOptions = $model->take($on_page)->skip($skip)->get();
+                    $total_count = app($options->model)->count();
+                    $relationshipOptions = app($options->model)->take($on_page)->skip($skip)->get();
                 }
 
                 $results = [];
 
-                if (!$row->required && !$search && $page == 1) {
+                if (!$row->required && !$search) {
                     $results[] = [
                         'id'   => '',
                         'text' => __('voyager::generic.none'),
                     ];
-                }
-
-                // Sort results
-                if (!empty($options->sort->field)) {
-                    if (!empty($options->sort->direction) && strtolower($options->sort->direction) == 'desc') {
-                        $relationshipOptions = $relationshipOptions->sortByDesc($options->sort->field);
-                    } else {
-                        $relationshipOptions = $relationshipOptions->sortBy($options->sort->field);
-                    }
                 }
 
                 foreach ($relationshipOptions as $relationshipOption) {
@@ -961,12 +871,5 @@ class VoyagerBaseController extends Controller
 
         // No result found, return empty array
         return response()->json([], 404);
-    }
-
-    protected function findRelationshipRow($relationshipRows, $searchKey)
-    {
-        return $relationshipRows->filter(function ($item) use ($searchKey) {
-            return $item->details->type == 'belongsTo' && $item->details->column == $searchKey;
-        })->first();
     }
 }

@@ -45,5 +45,4 @@ return [
     'success_crop_image'    => 'Kulloni me sukses imazhin',
     'height'                => 'Lartësia:',
     'width'                 => 'Gjerësia:',
-    'add_all_selected'      => 'Shtoni të gjitha të zgjedhura',
 ];

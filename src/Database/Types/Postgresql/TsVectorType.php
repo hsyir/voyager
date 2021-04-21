@@ -7,7 +7,7 @@ use TCG\Voyager\Database\Types\Type;
 
 class TsVectorType extends Type
 {
-    public const NAME = 'tsvector';
+    const NAME = 'tsvector';
 
     public function getSQLDeclaration(array $field, AbstractPlatform $platform)
     {

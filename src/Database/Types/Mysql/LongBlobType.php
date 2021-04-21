@@ -7,7 +7,7 @@ use TCG\Voyager\Database\Types\Type;
 
 class LongBlobType extends Type
 {
-    public const NAME = 'longblob';
+    const NAME = 'longblob';
 
     public function getSQLDeclaration(array $field, AbstractPlatform $platform)
     {

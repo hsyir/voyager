@@ -7,7 +7,7 @@ use TCG\Voyager\Database\Types\Type;
 
 class XmlType extends Type
 {
-    public const NAME = 'xml';
+    const NAME = 'xml';
 
     public function getSQLDeclaration(array $field, AbstractPlatform $platform)
     {

@@ -8,7 +8,8 @@
 
         @can('edit', $dataTypeContent)
             <a href="{{ route('voyager.'.$dataType->slug.'.edit', $dataTypeContent->getKey()) }}" class="btn btn-info">
-                <i class="glyphicon glyphicon-pencil"></i> <span class="hidden-xs hidden-sm">{{ __('voyager::generic.edit') }}</span>
+                <span class="glyphicon glyphicon-pencil"></span>&nbsp;
+                {{ __('voyager::generic.edit') }}
             </a>
         @endcan
         @can('delete', $dataTypeContent)
@@ -22,11 +23,11 @@
                 </a>
             @endif
         @endcan
-        @can('browse', $dataTypeContent)
+
         <a href="{{ route('voyager.'.$dataType->slug.'.index') }}" class="btn btn-warning">
-            <i class="glyphicon glyphicon-list"></i> <span class="hidden-xs hidden-sm">{{ __('voyager::generic.return_to_list') }}</span>
+            <span class="glyphicon glyphicon-list"></span>&nbsp;
+            {{ __('voyager::generic.return_to_list') }}
         </a>
-        @endcan
     </h1>
     @include('voyager::multilingual.language-selector')
 @stop
@@ -50,7 +51,7 @@
 
                         <div class="panel-body" style="padding-top:0;">
                             @if (isset($row->details->view))
-                                @include($row->details->view, ['row' => $row, 'dataType' => $dataType, 'dataTypeContent' => $dataTypeContent, 'content' => $dataTypeContent->{$row->field}, 'action' => 'read', 'view' => 'read', 'options' => $row->details])
+                                @include($row->details->view, ['row' => $row, 'dataType' => $dataType, 'dataTypeContent' => $dataTypeContent, 'content' => $dataTypeContent->{$row->field}, 'action' => 'read'])
                             @elseif($row->type == "image")
                                 <img class="img-responsive"
                                      src="{{ filter_var($dataTypeContent->{$row->field}, FILTER_VALIDATE_URL) ? $dataTypeContent->{$row->field} : Voyager::image($dataTypeContent->{$row->field}) }}">
@@ -110,7 +111,7 @@
                                 @include('voyager::partials.coordinates')
                             @elseif($row->type == 'rich_text_box')
                                 @include('voyager::multilingual.input-hidden-bread-read')
-                                {!! $dataTypeContent->{$row->field} !!}
+                                <p>{!! $dataTypeContent->{$row->field} !!}</p>
                             @elseif($row->type == 'file')
                                 @if(json_decode($dataTypeContent->{$row->field}))
                                     @foreach(json_decode($dataTypeContent->{$row->field}) as $file)

@@ -7,7 +7,7 @@ use TCG\Voyager\Database\Types\Type;
 
 class YearType extends Type
 {
-    public const NAME = 'year';
+    const NAME = 'year';
 
     public function getSQLDeclaration(array $field, AbstractPlatform $platform)
     {

@@ -12,7 +12,8 @@
             <?php $checked = isset($options->checked) && $options->checked ? true : false; ?>
         @endif
 
-        <input type="checkbox" name="{{ $row->field }}[{{$key}}]" {!! $checked ? 'checked="checked"' : '' !!} value="{{$key}}" id="{{$key}}"/>
-        <label for="{{$key}}">{{$label}}</label>
+        <input type="checkbox" name="{{ $row->field }}[{{$key}}]"
+               {!! $checked ? 'checked="checked"' : '' !!} value="{{$key}}" />
+        {{$label}}
     @endforeach
 @endif

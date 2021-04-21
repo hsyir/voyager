@@ -7,7 +7,7 @@ use TCG\Voyager\Database\Types\Type;
 
 class TinyBlobType extends Type
 {
-    public const NAME = 'tinyblob';
+    const NAME = 'tinyblob';
 
     public function getSQLDeclaration(array $field, AbstractPlatform $platform)
     {

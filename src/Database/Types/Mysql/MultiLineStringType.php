@@ -7,7 +7,7 @@ use TCG\Voyager\Database\Types\Type;
 
 class MultiLineStringType extends Type
 {
-    public const NAME = 'multilinestring';
+    const NAME = 'multilinestring';
 
     public function getSQLDeclaration(array $field, AbstractPlatform $platform)
     {

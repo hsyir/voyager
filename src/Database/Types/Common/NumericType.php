@@ -6,7 +6,7 @@ use Doctrine\DBAL\Types\DecimalType as DoctrineDecimalType;
 
 class NumericType extends DoctrineDecimalType
 {
-    public const NAME = 'numeric';
+    const NAME = 'numeric';
 
     public function getName()
     {

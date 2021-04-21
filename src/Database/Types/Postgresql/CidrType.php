@@ -7,7 +7,7 @@ use TCG\Voyager\Database\Types\Type;
 
 class CidrType extends Type
 {
-    public const NAME = 'cidr';
+    const NAME = 'cidr';
 
     public function getSQLDeclaration(array $field, AbstractPlatform $platform)
     {

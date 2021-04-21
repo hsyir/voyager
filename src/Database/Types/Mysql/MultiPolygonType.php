@@ -7,7 +7,7 @@ use TCG\Voyager\Database\Types\Type;
 
 class MultiPolygonType extends Type
 {
-    public const NAME = 'multipolygon';
+    const NAME = 'multipolygon';
 
     public function getSQLDeclaration(array $field, AbstractPlatform $platform)
     {

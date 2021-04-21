@@ -6,6 +6,6 @@ use TCG\Voyager\Database\Types\Common\DoubleType;
 
 class DoublePrecisionType extends DoubleType
 {
-    public const NAME = 'double precision';
-    public const DBTYPE = 'float8';
+    const NAME = 'double precision';
+    const DBTYPE = 'float8';
 }

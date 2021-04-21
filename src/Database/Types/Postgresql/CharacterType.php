@@ -6,6 +6,6 @@ use TCG\Voyager\Database\Types\Common\CharType;
 
 class CharacterType extends CharType
 {
-    public const NAME = 'character';
-    public const DBTYPE = 'bpchar';
+    const NAME = 'character';
+    const DBTYPE = 'bpchar';
 }

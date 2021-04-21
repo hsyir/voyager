@@ -11,12 +11,12 @@ use TCG\Voyager\Traits\Translatable;
 
 class Post extends Model
 {
-    use Translatable;
-    use Resizable;
+    use Translatable,
+        Resizable;
 
     protected $translatable = ['title', 'seo_title', 'excerpt', 'body', 'slug', 'meta_description', 'meta_keywords'];
 
-    public const PUBLISHED = 'PUBLISHED';
+    const PUBLISHED = 'PUBLISHED';
 
     protected $guarded = [];
 
@@ -27,7 +27,7 @@ class Post extends Model
             $this->author_id = Auth::user()->getKey();
         }
 
-        return parent::save();
+        parent::save();
     }
 
     public function authorId()

@@ -29,11 +29,7 @@ abstract class ForeignKey
         }
 
         $doctrineForeignKey = new DoctrineForeignKey(
-            $localColumns,
-            $foreignTable,
-            $foreignColumns,
-            $name,
-            $options
+            $localColumns, $foreignTable, $foreignColumns, $name, $options
         );
 
         if (isset($localTable)) {

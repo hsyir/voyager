@@ -7,7 +7,7 @@ use TCG\Voyager\Database\Types\Type;
 
 class JsonbType extends Type
 {
-    public const NAME = 'jsonb';
+    const NAME = 'jsonb';
 
     public function getSQLDeclaration(array $field, AbstractPlatform $platform)
     {
